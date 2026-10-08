@@ -1,0 +1,24 @@
+{
+  "hosting": {
+    "site": "cosmo-cube",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      "**/.*",
+      "**/node_modules/**",
+      "tools/**",
+      "README.md"
+    ],
+    "redirects": [
+      { "source": "/", "destination": "/landing.html", "type": 302 },
+      { "source": "/play", "destination": "/index.html", "type": 302 }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|html)",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      }
+    ]
+  }
+}

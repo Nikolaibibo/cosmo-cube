@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cosmo Cube — a Giana-style space adventure</title>
+  <meta name="description" content="Cosmo Cube: a neon space platformer in your browser. Three levels, three monsters, a boss, secret rooms — no install, no download.">
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --bg: #05040f;
+      --bg-2: #0b0a1f;
+      --panel: rgba(18, 18, 44, 0.72);
+      --line: rgba(160, 170, 255, 0.16);
+      --text: #f2f3ff;
+      --muted: #b4bbe6;
+      --cyan: #38e1ff;
+      --violet: #9d7bff;
+      --pink: #ff5fd2;
+      --gold: #ffd23d;
+      --orange: #ff8a3d;
+      --mint: #3dffd0;
+      --radius: 18px;
+      --font: "Trebuchet MS", "Segoe UI", Verdana, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.55;
+      overflow-x: hidden;
+    }
+    a { color: inherit; }
+    img { max-width: 100%; display: block; }
+
+    /* starfield behind everything */
+    #stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    .nebula {
+      position: fixed; inset: -20%; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(40% 35% at 20% 25%, rgba(123, 47, 247, 0.28), transparent 70%),
+        radial-gradient(35% 30% at 80% 20%, rgba(47, 107, 247, 0.22), transparent 70%),
+        radial-gradient(45% 40% at 70% 85%, rgba(192, 76, 240, 0.18), transparent 70%),
+        radial-gradient(30% 30% at 10% 90%, rgba(61, 255, 208, 0.10), transparent 70%);
+    }
+    main, header, footer { position: relative; z-index: 1; }
+    .wrap { width: min(1160px, 100% - 32px); margin-inline: auto; }
+
+    /* nav */
+    header {
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: blur(10px);
+      background: rgba(5, 4, 15, 0.6);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 64px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; letter-spacing: 0.08em; text-decoration: none; }
+    .brand .mini {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: linear-gradient(#fff 0 12%, var(--cyan) 30%, #0b7ea8);
+      box-shadow: 0 0 14px var(--cyan);
+    }
+    .nav ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; }
+    .nav ul a { text-decoration: none; color: var(--muted); font-size: 15px; }
+    .nav ul a:hover { color: var(--text); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 26px; border-radius: 999px;
+      font-weight: 800; font-size: 17px; text-decoration: none; letter-spacing: 0.02em;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .btn-primary {
+      color: #061018;
+      background: linear-gradient(135deg, #7ff6ff, var(--cyan) 45%, #2aa8ff);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset, 0 10px 40px rgba(56, 225, 255, 0.45);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(255,255,255,.35) inset, 0 14px 50px rgba(56, 225, 255, 0.6); }
+    .btn-ghost { color: var(--text); border: 1px solid var(--line); background: rgba(255,255,255,0.04); }
+    .btn-ghost:hover { border-color: rgba(160,170,255,.4); }
+    .btn-small { padding: 9px 18px; font-size: 14px; }
+    .btn:focus-visible, .nav a:focus-visible, .shot:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+    /* hero */
+    .hero { padding: 72px 0 56px; }
+    .hero-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; }
+    .eyebrow {
+      display: inline-block; font-size: 13px; letter-spacing: .22em; text-transform: uppercase;
+      color: var(--violet); border: 1px solid rgba(157,123,255,.35); border-radius: 999px; padding: 6px 14px;
+      background: rgba(157,123,255,.08);
+    }
+    h1 {
+      font-size: clamp(54px, 9vw, 104px); line-height: .95; margin: 20px 0 18px; font-weight: 900; letter-spacing: .02em;
+      text-shadow: 0 0 24px rgba(56,225,255,.55), 0 0 2px #fff;
+    }
+    h1 span { color: var(--cyan); }
+    .lead { font-size: clamp(18px, 2.1vw, 21px); color: var(--muted); max-width: 34ch; margin: 0 0 30px; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+    .note { margin-top: 18px; font-size: 14px; color: var(--muted); }
+    .note b { color: var(--text); }
+
+    .stage { position: relative; aspect-ratio: 16 / 10; }
+    .stage .screen {
+      position: absolute; inset: 6% 0 0 6%;
+      border-radius: var(--radius); overflow: hidden;
+      border: 1px solid rgba(157,123,255,.35);
+      box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 60px rgba(123,47,247,.35);
+      transform: perspective(1200px) rotateY(-8deg) rotateX(3deg);
+    }
+    .stage .screen img { width: 100%; height: 100%; object-fit: cover; }
+    /* the hero cube, drawn in CSS */
+    .cube {
+      position: absolute; left: -2%; bottom: 4%;
+      width: 112px; height: 112px; border-radius: 24px;
+      background: linear-gradient(#ffffff 0 10%, var(--cyan) 26%, #0b7ea8);
+      border: 4px solid #8ff3ff;
+      box-shadow: 0 0 40px var(--cyan), 0 0 120px rgba(56,225,255,.45);
+      animation: hop 2.4s ease-in-out infinite;
+      z-index: 2;
+    }
+    .cube .eye {
+      position: absolute; top: 34px; width: 20px; height: 26px; border-radius: 50%; background: #fff;
+      animation: blink 4.2s infinite;
+    }
+    .cube .eye::after {
+      content: ""; position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #10142a; top: 9px; left: 7px;
+    }
+    .cube .eye.l { left: 26px; }
+    .cube .eye.r { right: 26px; }
+    .cube .mouth {
+      position: absolute; left: 50%; top: 70px; width: 26px; height: 13px; transform: translateX(-50%);
+      border-bottom: 4px solid #10142a; border-radius: 0 0 26px 26px;
+    }
+    .cube-shadow {
+      position: absolute; left: 1%; bottom: 0; width: 100px; height: 14px; border-radius: 50%;
+      background: radial-gradient(rgba(56,225,255,.45), transparent 70%);
+      animation: shadow 2.4s ease-in-out infinite;
+    }
+    @keyframes hop {
+      0%, 100% { transform: translateY(0) scale(1.08, .92); }
+      15% { transform: translateY(-6px) scale(.92, 1.08); }
+      50% { transform: translateY(-58px) scale(.97, 1.03) rotate(-4deg); }
+      85% { transform: translateY(-4px) scale(.95, 1.05); }
+    }
+    @keyframes shadow { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.6); opacity: .4; } }
+    @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+
+    /* stats strip */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 8px; }
+    .stat {
+      background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 18px 20px; text-align: center;
+    }
+    .stat b { display: block; font-size: 34px; font-weight: 900; color: var(--gold); text-shadow: 0 0 16px rgba(255,210,61,.45); }
+    .stat span { color: var(--muted); font-size: 14px; }
+
+    /* sections */
+    section { padding: 84px 0 0; }
+    .kicker { color: var(--cyan); font-size: 13px; letter-spacing: .22em; text-transform: uppercase; margin: 0 0 8px; }
+    h2 { font-size: clamp(32px, 4.5vw, 48px); margin: 0 0 14px; line-height: 1.1; }
+    .sub { color: var(--muted); max-width: 60ch; margin: 0 0 34px; font-size: 18px; }
+
+    .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .level {
+      border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line);
+      background: var(--panel); display: flex; flex-direction: column;
+      transition: transform .2s ease, border-color .2s ease;
+    }
+    .level:hover { transform: translateY(-4px); }
+    .level img { aspect-ratio: 16 / 9; object-fit: cover; }
+    .level .body { padding: 20px 22px 24px; }
+    .level .num { font-size: 13px; letter-spacing: .2em; text-transform: uppercase; }
+    .level h3 { margin: 4px 0 8px; font-size: 24px; }
+    .level p { margin: 0; color: var(--muted); font-size: 15.5px; }
+    .l1 { border-color: rgba(157,123,255,.45); } .l1 .num { color: var(--violet); }
+    .l2 { border-color: rgba(255,138,61,.45); } .l2 .num { color: var(--orange); }
+    .l3 { border-color: rgba(61,255,208,.45); } .l3 .num { color: var(--mint); }
+
+    .cast { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px;
+    }
+    .card h3 { margin: 0 0 18px; font-size: 22px; }
+    .row { display: grid; grid-template-columns: 64px 1fr; gap: 16px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+    .row:first-of-type { border-top: 0; }
+    .row svg { width: 64px; height: 56px; }
+    .row b { display: block; font-size: 17px; }
+    .row span { color: var(--muted); font-size: 15px; }
+
+    .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .shot {
+      border: 1px solid var(--line); border-radius: 14px; overflow: hidden; padding: 0; cursor: zoom-in;
+      background: none; transition: transform .2s ease, border-color .2s ease;
+    }
+    .shot:hover { transform: scale(1.02); border-color: rgba(56,225,255,.5); }
+    .shot img { aspect-ratio: 16 / 9; object-fit: cover; width: 100%; }
+
+    .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .ctrl {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; text-align: center;
+    }
+    .key {
+      display: inline-flex; align-items: center; justify-content: center; min-width: 46px; height: 46px; padding: 0 12px;
+      border-radius: 10px; font-weight: 900; font-size: 18px; color: var(--text);
+      background: linear-gradient(#2a2c55, #15162e); border: 1px solid rgba(160,170,255,.35);
+      box-shadow: 0 4px 0 #0a0a1a, 0 0 18px rgba(56,225,255,.15);
+    }
+    .key.wide { min-width: 140px; }
+    .ctrl .what { display: block; margin-top: 12px; color: var(--muted); font-size: 15px; }
+    kbd { font-family: inherit; }
+
+    .final {
+      margin: 96px 0 0; padding: 56px 28px; text-align: center; border-radius: 26px;
+      border: 1px solid rgba(61,255,208,.35);
+      background:
+        radial-gradient(60% 120% at 50% 0%, rgba(61,255,208,.18), transparent 70%),
+        radial-gradient(50% 100% at 50% 100%, rgba(123,47,247,.25), transparent 70%),
+        var(--bg-2);
+    }
+    .final h2 { margin-bottom: 10px; }
+    .final p { color: var(--muted); margin: 0 auto 28px; max-width: 46ch; font-size: 18px; }
+
+    footer { padding: 56px 0 44px; color: var(--muted); font-size: 14px; text-align: center; }
+    footer p { margin: 6px 0; }
+    .egg { color: var(--pink); }
+
+    /* lightbox */
+    .lightbox {
+      position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center;
+      background: rgba(2, 2, 10, 0.88); padding: 16px; cursor: zoom-out;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-height: 90vh; border-radius: 12px; box-shadow: 0 0 80px rgba(56,225,255,.3); }
+
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+      .stage { max-width: 620px; }
+      .levels, .gallery { grid-template-columns: 1fr 1fr; }
+      .cast { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: repeat(2, 1fr); }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .nav ul { display: none; }
+      .hero { padding-top: 44px; }
+      .levels, .gallery { grid-template-columns: 1fr; }
+      .cube { width: 84px; height: 84px; border-radius: 18px; }
+      .cube .eye { top: 24px; width: 15px; height: 20px; }
+      .cube .eye::after { width: 7px; height: 7px; top: 7px; left: 4px; }
+      .cube .eye.l { left: 18px; } .cube .eye.r { right: 18px; }
+      .cube .mouth { top: 52px; width: 20px; }
+      .key.wide { min-width: 110px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="nebula" aria-hidden="true"></div>
+
+  <header>
+    <nav class="wrap nav" aria-label="Main">
+      <a class="brand" href="#top"><span class="mini" aria-hidden="true"></span>COSMO CUBE</a>
+      <ul>
+        <li><a href="#levels">Levels</a></li>
+        <li><a href="#cast">Monsters &amp; items</a></li>
+        <li><a href="#gallery">Screenshots</a></li>
+        <li><a href="#controls">Controls</a></li>
+      </ul>
+      <a class="btn btn-primary btn-small" href="index.html">▶ Play</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <div class="wrap hero">
+      <div class="hero-grid">
+        <div>
+          <span class="eyebrow">A Giana-style space adventure</span>
+          <h1>COSMO<br><span>CUBE</span></h1>
+          <p class="lead">Run, jump and blast your way through three neon worlds as a tiny glowing cube, from the purple Nebula Fields to the Crystal Moon, where a giant space jellyfish is waiting.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="index.html">▶ Play now</a>
+            <a class="btn btn-ghost" href="#controls">How to play</a>
+          </div>
+          <p class="note"><b>Runs right in your browser.</b> No install, no download, no account.</p>
+        </div>
+        <div class="stage">
+          <div class="screen"><img src="assets/03-level1-play.png" alt="Cosmo Cube gameplay: the glowing cube runs across a neon platform under a ringed planet, collecting coins"></div>
+          <div class="cube-shadow" aria-hidden="true"></div>
+          <div class="cube" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i><i class="mouth"></i></div>
+        </div>
+      </div>
+
+      <div class="stats" role="list">
+        <div class="stat" role="listitem"><b>3</b><span>hand-built levels</span></div>
+        <div class="stat" role="listitem"><b>3</b><span>monster types + a boss</span></div>
+        <div class="stat" role="listitem"><b>3</b><span>secret rooms to find</span></div>
+        <div class="stat" role="listitem"><b>0</b><span>image or sound files: all drawn &amp; synthesized in code</span></div>
+      </div>
+    </div>
+
+    <section id="levels">
+      <div class="wrap">
+        <p class="kicker">The journey</p>
+        <h2>Three worlds, one warp gate each</h2>
+        <p class="sub">Every level is a little harder than the last, but always fair: checkpoints in the middle, generous hitboxes, and no power-up you can't play without.</p>
+        <div class="levels">
+          <article class="level l1">
+            <img src="assets/03-level1-play.png" alt="Nebula Fields: the cube runs past coins and a green walker" loading="lazy">
+            <div class="body">
+              <div class="num">Level 1</div>
+              <h3>Nebula Fields</h3>
+              <p>A gentle start under purple skies. Learn to run, jump, duck and shoot, then ride your first moving platform.</p>
+            </div>
+          </article>
+          <article class="level l2">
+            <img src="assets/08-level2-lowgrav.png" alt="Orange asteroid belt with a low-gravity zone full of floating bubbles" loading="lazy">
+            <div class="body">
+              <div class="num">Level 2</div>
+              <h3>Asteroid Belt</h3>
+              <p>Wider chasms, more monsters, crumbling rocks, and anti-gravity bubbles that turn every jump into a slow, floaty leap.</p>
+            </div>
+          </article>
+          <article class="level l3">
+            <img src="assets/10-boss.png" alt="Boss fight against the Nebula Jelly, a giant one-eyed space jellyfish" loading="lazy">
+            <div class="body">
+              <div class="num">Level 3</div>
+              <h3>Crystal Moon</h3>
+              <p>Everything at once, and at the end the <b>Nebula Jelly</b>: fireball fans, falling stones, ten hits to win.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="cast">
+      <div class="wrap">
+        <p class="kicker">Know your universe</p>
+        <h2>Cute. Spooky. Stompable.</h2>
+        <p class="sub">Shoot them with W or jump on their heads. Collect power-ups to jump higher or survive a hit.</p>
+        <div class="cast">
+          <div class="card">
+            <h3>Monsters</h3>
+            <div class="row">
+              <svg viewBox="0 0 64 56" aria-hidden="true"><ellipse cx="32" cy="34" rx="18" ry="13" fill="#9dff5a"/><path d="M22 24 L16 10 M42 24 L48 10" stroke="#9dff5a" stroke-width="3"/><rect x="13" y="6" width="5" height="5" fill="#e8ffd0"/><rect x="46" y="6" width="5" height="5" fill="#e8ffd0"/><circle cx="34" cy="32" r="7" fill="#fff"/><circle cx="36" cy="32" r="3" fill="#200"/></svg>
+              <div><b>Walker</b><span>Patrols its platform and turns at every edge. Classic Giana style.</span></div>
+            </div>
+            <div class="row">
+              <svg viewBox="0 0 64 56" aria-hidden="true"><path d="M32 8 Q50 12 48 42 L16 42 Q14 12 32 8Z" fill="#ff5a7a"/><rect x="18" y="42" width="5" height="9" fill="#8f1a33"/><rect x="26" y="42" width="5" height="9" fill="#8f1a33"/><rect x="34" y="42" width="5" height="9" fill="#8f1a33"/><rect x="42" y="42" width="5" height="9" fill="#8f1a33"/><rect x="24" y="20" width="6" height="6" fill="#fff"/><rect x="35" y="20" width="6" height="6" fill="#fff"/><circle cx="50" cy="34" r="6" fill="#ff8a3d"/></svg>
+              <div><b>Fire Shooter</b><span>Spits fireballs at head height. Duck with S and they fly right over you.</span></div>
+            </div>
+            <div class="row">
+              <svg viewBox="0 0 64 56" aria-hidden="true"><ellipse cx="32" cy="30" rx="22" ry="8" fill="#5a2a9f"/><path d="M14 28 A18 16 0 0 1 50 28Z" fill="#c08bff"/><rect x="25" y="20" width="4" height="5" fill="#1a0533"/><rect x="36" y="20" width="4" height="5" fill="#1a0533"/><rect x="27" y="42" width="10" height="9" rx="2" fill="#ffcc66"/></svg>
+              <div><b>Flyer</b><span>Hovers overhead and drops stones. Watch for the blinking warning.</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Power-ups</h3>
+            <div class="row">
+              <svg viewBox="0 0 64 56" aria-hidden="true"><circle cx="32" cy="28" r="22" fill="rgba(255,194,26,.15)" stroke="#ffc21a" stroke-width="2"/><path d="M24 16 H33 V29 L44 32 V38 H24Z" fill="#ffc21a"/><rect x="24" y="36" width="20" height="3" fill="#fff"/></svg>
+              <div><b>Super-Jump Boots</b><span>15 seconds of huge golden jumps, the way up to hidden bonus coins.</span></div>
+            </div>
+            <div class="row">
+              <svg viewBox="0 0 64 56" aria-hidden="true"><circle cx="32" cy="28" r="22" fill="rgba(255,138,61,.15)" stroke="#ff8a3d" stroke-width="2"/><path d="M26 42 L38 38 L26 34 L38 30 L26 26" stroke="#ff8a3d" stroke-width="3" fill="none"/><circle cx="32" cy="19" r="7" fill="#ffd0a0"/><rect x="28" y="17" width="2" height="2" fill="#222"/><rect x="34" y="17" width="2" height="2" fill="#222"/></svg>
+              <div><b>Spring Guardian</b><span>A little friend on a spring: 10 more seconds of super jump.</span></div>
+            </div>
+            <div class="row">
+              <svg viewBox="0 0 64 56" aria-hidden="true"><circle cx="32" cy="28" r="22" fill="rgba(79,195,255,.18)" stroke="#4fc3ff" stroke-width="3"/><circle cx="32" cy="28" r="14" fill="rgba(79,195,255,.35)"/><rect x="24" y="19" width="5" height="5" fill="#fff"/></svg>
+              <div><b>Shield</b><span>A shimmering bubble for 5 seconds: fireballs, stones and monsters bounce off.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="gallery">
+      <div class="wrap">
+        <p class="kicker">Screenshots</p>
+        <h2>Neon everything</h2>
+        <p class="sub">Parallax nebulae, ringed planets, comets, supernovas, and a portal finale with fireworks. Click to enlarge.</p>
+        <div class="gallery">
+          <button class="shot" type="button"><img src="assets/03-level1-play.png" alt="Level 1 gameplay with combo counter" loading="lazy"></button>
+          <button class="shot" type="button"><img src="assets/07-secret-room.png" alt="Secret room full of coins and a secret star, cube inside its shield bubble" loading="lazy"></button>
+          <button class="shot" type="button"><img src="assets/08-level2-lowgrav.png" alt="Asteroid Belt low-gravity zone with floating bubbles" loading="lazy"></button>
+          <button class="shot" type="button"><img src="assets/10-boss.png" alt="Boss fight against the Nebula Jelly with its health bar" loading="lazy"></button>
+          <button class="shot" type="button"><img src="assets/13-level-complete.png" alt="Level complete screen with star rating" loading="lazy"></button>
+          <button class="shot" type="button"><img src="assets/01-title.png" alt="Title screen" loading="lazy"></button>
+        </div>
+      </div>
+    </section>
+
+    <section id="controls">
+      <div class="wrap">
+        <p class="kicker">How to play</p>
+        <h2>Easy to learn, keyboard only</h2>
+        <p class="sub">Gamepads work too. Collect coins in quick succession to build a combo of up to ×8, and earn up to three stars per level.</p>
+        <div class="controls">
+          <div class="ctrl"><kbd class="key">A</kbd> <kbd class="key">D</kbd><span class="what">run left / right</span></div>
+          <div class="ctrl"><kbd class="key wide">SPACE</kbd><span class="what">jump: hold longer to jump higher</span></div>
+          <div class="ctrl"><kbd class="key">S</kbd><span class="what">duck under fireballs</span></div>
+          <div class="ctrl"><kbd class="key">W</kbd><span class="what">shoot an energy ball</span></div>
+          <div class="ctrl"><kbd class="key">P</kbd> <kbd class="key">ESC</kbd><span class="what">pause</span></div>
+          <div class="ctrl"><kbd class="key">M</kbd><span class="what">mute</span></div>
+          <div class="ctrl"><kbd class="key">C</kbd><span class="what">retro CRT filter</span></div>
+          <div class="ctrl"><kbd class="key wide">ENTER</kbd><span class="what">start / confirm</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <div class="final">
+        <p class="kicker">Ready?</p>
+        <h2>The Nebula Jelly is waiting.</h2>
+        <p>Three levels, about three minutes each. Find all three secret stars if you can.</p>
+        <a class="btn btn-primary" href="index.html">▶ Play Cosmo Cube</a>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Built with plain HTML5 Canvas and the Web Audio API. Every pixel is drawn and every sound synthesized in code.</p>
+      <p class="egg">✦ Psst: try typing a certain word on the title screen. ✦</p>
+    </div>
+  </footer>
+
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Screenshot"><img alt=""></div>
+
+  <script>
+    'use strict';
+    // twinkling, slowly drifting starfield
+    (function stars() {
+      const c = document.getElementById('stars');
+      const g = c.getContext('2d');
+      const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let w = 0, h = 0, pts = [];
+      function resize() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        w = window.innerWidth; h = window.innerHeight;
+        c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        pts = Array.from({ length: Math.round((w * h) / 5000) }, () => ({
+          x: Math.random() * w, y: Math.random() * h, s: Math.random() * 1.6 + 0.4,
+          v: Math.random() * 6 + 2, p: Math.random() * 6.28, t: Math.random() * 2 + 0.6,
+          c: Math.random() < 0.12 ? '#c9a6ff' : Math.random() < 0.1 ? '#7ff6ff' : '#ffffff',
+        }));
+      }
+      let last = 0;
+      function frame(ts) {
+        const dt = Math.min(0.05, (ts - last) / 1000 || 0);
+        last = ts;
+        g.clearRect(0, 0, w, h);
+        for (const s of pts) {
+          if (!still) { s.x -= s.v * dt * s.s; if (s.x < -2) s.x = w + 2; }
+          g.globalAlpha = 0.45 + 0.55 * Math.abs(Math.sin(ts / 1000 * s.t + s.p));
+          g.fillStyle = s.c;
+          g.fillRect(s.x, s.y, s.s, s.s);
+        }
+        g.globalAlpha = 1;
+        if (!still) requestAnimationFrame(frame);
+      }
+      resize();
+      window.addEventListener('resize', () => { resize(); if (still) frame(0); });
+      requestAnimationFrame(frame);
+    })();
+
+    // screenshot lightbox
+    (function lightbox() {
+      const box = document.getElementById('lightbox');
+      const img = box.querySelector('img');
+      let opener = null;
+      document.querySelectorAll('.shot').forEach((b) => b.addEventListener('click', () => {
+        const src = b.querySelector('img');
+        img.src = src.src;
+        img.alt = src.alt;
+        opener = b;
+        box.classList.add('open');
+        box.tabIndex = -1;
+        box.focus();
+      }));
+      const close = () => { box.classList.remove('open'); if (opener) opener.focus(); };
+      box.addEventListener('click', close);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && box.classList.contains('open')) close(); });
+    })();
+  </script>
+</body>
+</html>

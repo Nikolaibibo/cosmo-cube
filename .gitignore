@@ -1,0 +1,5 @@
+# Firebase deploy cache
+.firebase/
+# screenshots written by tools/browser-test.js (regenerated on every run)
+tools/out/
+node_modules/
